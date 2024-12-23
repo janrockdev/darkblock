@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+option go_package = "github.com/janrock/darkblock/proto";
+
+service Node {
+	rpc Handshake(Version) returns (Version);
+	rpc HandleTransaction(Transaction) returns (Ack);
+	rpc HandleBlock(Block) returns (Ack);
+	rpc GetBlock(BlockSearch) returns (BlockSearchResult);
+	rpc GetTransaction(TxSearch) returns (TxSearchResult);
+}
+
+message Version {
+	string version = 1;
+	int32 height = 2;
+	string listenAddr = 3;
+	repeated string peerList = 4;
+}
+
+message Ack { }
+
+message Block {
+  Header header = 1;
+  repeated Transaction transactions = 2;
+  bytes publicKey = 3;
+  bytes signature = 4;
+}
+
+message Header {
+	int32 version = 1;
+	int32 height = 2; //id
+	bytes prevHash = 3;
+	bytes rootHash = 4; //merkle root of txs
+	int64 timestamp = 5;
+}
+
+message TxInput {
+	// the previous hash of the transaction containing the output
+	bytes prevTxHash = 1;
+	// the index of the output of the previous transaction
+	uint32 prevOutIndex = 2;
+	bytes publicKey = 3;
+	bytes signature = 4;
+}
+
+message TxOutput {
+	int64 amount = 1;
+	bytes address = 2;
+	bytes payload = 3;
+}
+
+message Transaction {
+	int32 version = 1;
+	repeated TxInput inputs = 2;
+	repeated TxOutput outputs = 3;
+}
+
+message TxSearch {
+	int32 txIndex = 1;
+}
+
+message TxSearchResult {
+	Transaction transaction = 1;
+	bytes blockHash = 2;
+}
+
+message BlockSearch {
+	int32 blockHeight = 1;
+}
+
+message BlockSearchResult {
+	Block block = 1;
+}
+

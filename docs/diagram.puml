@@ -1,0 +1,270 @@
+@startuml
+namespace config {
+    class ConfigFile << (S,Aquamarine) >> {
+        + NODE <font color=blue>struct</font>{int}
+
+    }
+}
+
+
+namespace crypto {
+    class Address << (S,Aquamarine) >> {
+        - value []byte
+
+        + Bytes() []byte
+        + String() string
+
+    }
+    class PrivateKey << (S,Aquamarine) >> {
+        - key ed25519.PrivateKey
+
+        + Bytes() []byte
+        + Sign(msg []byte) *Signature
+        + Public() *PublicKey
+
+    }
+    class PublicKey << (S,Aquamarine) >> {
+        - key ed25519.PublicKey
+
+        + Address() *Address
+        + Bytes() []byte
+
+    }
+    class Signature << (S,Aquamarine) >> {
+        - value []byte
+
+        + Bytes() []byte
+        + Verify(pubKey *PublicKey, msg []byte) bool
+
+    }
+}
+
+
+namespace node {
+    interface BlockStorer  {
+        + Put( *proto.Block) error
+        + Get( string) (*proto.Block, error)
+
+    }
+    class Chain << (S,Aquamarine) >> {
+        - blockStore BlockStorer
+        - headers *HeaderList
+
+        + Height() int
+        + AddBlock(b *proto.Block) error
+        + GetBlockByHash(hash []byte) (*proto.Block, error)
+        + GetBlockByHeight(height int) (*proto.Block, error)
+
+    }
+    class HeaderList << (S,Aquamarine) >> {
+        - headers []*proto.Header
+
+        + Add(h *proto.Header) 
+        + Get(index int) *proto.Header
+        + Height() int
+        + Len() int
+
+    }
+    class MemoryBlockStore << (S,Aquamarine) >> {
+        - lock sync.RWMutex
+        - blocks <font color=blue>map</font>[string]*proto.Block
+
+        + Put(b *proto.Block) error
+        + Get(hash string) (*proto.Block, error)
+
+    }
+    class Node << (S,Aquamarine) >> {
+        - version string
+        - listenAddr string
+        - peerLock sync.RWMutex
+        - peers <font color=blue>map</font>[proto.NodeClient]*proto.Version
+
+        + Logger *zerolog.Logger
+
+        - addPeer(c proto.NodeClient, v *proto.Version) 
+        - deletePeer(c proto.NodeClient) 
+        - bootstrapNetwork(addrs []string) error
+        - dialRemoteNode(addr string) (proto.NodeClient, *proto.Version, error)
+        - getVersion() *proto.Version
+        - canConnectWith(addr string) bool
+        - getPeerList() []string
+
+        + Start(listenAddr string, bootstrapNodes []string) error
+        + Handshake(ctx context.Context, v *proto.Version) (*proto.Version, error)
+        + HandleTransaction(ctx context.Context, tx *proto.Transaction) (*proto.Ack, error)
+
+    }
+}
+"proto.UnimplementedNodeServer" *-- "node.Node"
+
+"node.BlockStorer" <|-- "node.MemoryBlockStore"
+
+namespace proto {
+    class Ack << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+
+    }
+    class Block << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Header *Header
+        + Transaction []*Transaction
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetHeader() *Header
+        + GetTransaction() []*Transaction
+
+    }
+    class Header << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Version int32
+        + Height int32
+        + PrevHash []byte
+        + RootHash []byte
+        + Timestamp int64
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetVersion() int32
+        + GetHeight() int32
+        + GetPrevHash() []byte
+        + GetRootHash() []byte
+        + GetTimestamp() int64
+
+    }
+    interface NodeClient  {
+        + Handshake(ctx context.Context, in *Version, opts ...grpc.CallOption) (*Version, error)
+        + HandleTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Ack, error)
+
+    }
+    interface NodeServer  {
+        - mustEmbedUnimplementedNodeServer() 
+
+        + Handshake( context.Context,  *Version) (*Version, error)
+        + HandleTransaction( context.Context,  *Transaction) (*Ack, error)
+
+    }
+    class Transaction << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Version int32
+        + Inputs []*TxInput
+        + Outputs []*TxOutput
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetVersion() int32
+        + GetInputs() []*TxInput
+        + GetOutputs() []*TxOutput
+
+    }
+    class TxInput << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + PrevTxHash []byte
+        + PrevOutIndex uint32
+        + PublicKey []byte
+        + Signature []byte
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetPrevTxHash() []byte
+        + GetPrevOutIndex() uint32
+        + GetPublicKey() []byte
+        + GetSignature() []byte
+
+    }
+    class TxOutput << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Amount int64
+        + Address []byte
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetAmount() int64
+        + GetAddress() []byte
+
+    }
+    class UnimplementedNodeServer << (S,Aquamarine) >> {
+        - mustEmbedUnimplementedNodeServer() 
+        - testEmbeddedByValue() 
+
+        + Handshake( context.Context,  *Version) (*Version, error)
+        + HandleTransaction( context.Context,  *Transaction) (*Ack, error)
+
+    }
+    interface UnsafeNodeServer  {
+        - mustEmbedUnimplementedNodeServer() 
+
+    }
+    class Version << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Version string
+        + Height int32
+        + ListenAddr string
+        + PeerList []string
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetVersion() string
+        + GetHeight() int32
+        + GetListenAddr() string
+        + GetPeerList() []string
+
+    }
+    class nodeClient << (S,Aquamarine) >> {
+        - cc grpc.ClientConnInterface
+
+        + Handshake(ctx context.Context, in *Version, opts ...grpc.CallOption) (*Version, error)
+        + HandleTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Ack, error)
+
+    }
+}
+
+"proto.NodeServer" <|-- "proto.UnimplementedNodeServer"
+"proto.UnsafeNodeServer" <|-- "proto.UnimplementedNodeServer"
+"proto.NodeClient" <|-- "proto.nodeClient"
+
+@enduml
