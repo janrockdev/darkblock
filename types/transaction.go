@@ -1,8 +1,10 @@
 package types
 
 import (
-	"crypto/sha256"
+	//"crypto/sha256"
 	"encoding/hex"
+
+	"golang.org/x/crypto/sha3"
 
 	"github.com/janrockdev/darkblock/crypto"
 	"github.com/janrockdev/darkblock/proto"
@@ -15,19 +17,22 @@ func SignTransaction(pk *crypto.PrivateKey, tx *proto.Transaction) *crypto.Signa
 	return pk.Sign(HashTransaction(tx))
 }
 
-// HashTransactions returns the sha256 hash of a transaction.
+// HashTransactions returns the sha hash of a transaction.
 func HashTransaction(tx *proto.Transaction) []byte {
 	b, err := pb.Marshal(tx)
 	if err != nil {
 		util.Logger.Error().Msgf("error marshalling transaction [%s]", err)
 		panic(err)
 	}
-	hash := sha256.Sum256(b)
+	//hash := sha256.Sum256(b)
+	hash := sha3.New512()
+	hash.Write(b)
+	hashBytes := hash.Sum(nil)
 
-	return hash[:]
+	return hashBytes[:]
 }
 
-// HashTransactions returns the sha256 hash of a transaction.
+// HashTransactions returns the sha hash of a transaction.
 func HashTransactionNoSigPuK(tx *proto.Transaction) []byte {
 
 	ctx := CopyTransaction(tx)
@@ -40,9 +45,12 @@ func HashTransactionNoSigPuK(tx *proto.Transaction) []byte {
 		util.Logger.Error().Msgf("error marshalling transaction [%s]", err)
 		panic(err)
 	}
-	hash := sha256.Sum256(b)
+	//hash := sha256.Sum256(b)
+	hash := sha3.New512()
+	hash.Write(b)
+	hashBytes := hash.Sum(nil)
 
-	return hash[:]
+	return hashBytes[:]
 }
 
 // VerifyTransaction verifies the signature of a transaction.

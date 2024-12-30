@@ -2,7 +2,8 @@ package types
 
 import (
 	"bytes"
-	"crypto/sha256"
+	//"crypto/sha256"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/cbergoon/merkletree"
 	"github.com/janrockdev/darkblock/crypto"
@@ -133,9 +134,13 @@ func HashHeader(header *proto.Header) []byte {
 		util.Logger.Error().Msgf("error marshalling header: %v", err)
 		panic(err)
 	}
-	hash := sha256.Sum256(b)
 
-	return hash[:]
+	//hash := sha256.Sum256(b)
+	hash := sha3.New512()
+	hash.Write(b)
+	hashBytes := hash.Sum(nil)
+
+	return hashBytes[:]
 }
 
 func BlockBytes(b *proto.Block) []byte {

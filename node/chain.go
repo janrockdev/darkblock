@@ -70,6 +70,7 @@ type Chain struct {
 // }
 
 func NewChain(bs BlockStorer, txStore TXStorer) *Chain {
+	db_dir := util.LoadConfig().BADGER.DataDir
 	chain := &Chain{
 		blockStore: bs,
 		txStore:    txStore,
@@ -78,11 +79,11 @@ func NewChain(bs BlockStorer, txStore TXStorer) *Chain {
 	}
 	// check badger db for existing blocks
 	// if there is no block, create a genesis block
-	if !services.CacheExists("db") {
+	if !services.CacheExists(db_dir) {
 		chain.addBlock(createGenesisBlock())
 	} else {
 		// connect to badger db
-		bdb, err := services.ConnectBadgerDB("db")
+		bdb, err := services.ConnectBadgerDB(db_dir)
 		if err != nil {
 			util.Logger.Error().Msgf("error connecting to badger db: [%s]", err.Error())
 			panic(err)
@@ -193,7 +194,7 @@ func (c *Chain) ValidateBlock(b *proto.Block) error {
 	// 		util.Logger.Error().Msgf("error getting block by height: [%s]", err.Error())
 	// 	}
 	// } else {
-	// 	bdb, err := services.ConnectBadgerDBReadOnly("db")
+	// 	bdb, err := services.ConnectBadgerDBReadOnly(db_dir)
 	// 	if err != nil {
 	// 		util.Logger.Error().Msgf("error connecting to badger db: [%s]", err.Error())
 	// 		panic(err)

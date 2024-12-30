@@ -146,7 +146,7 @@ func (n *Node) Start(listenAddr string, bootstrapNodes []string) error {
 	proto.RegisterNodeServer(grpcServer, n)
 
 	// Comment: Initialize cache
-	//n.cache = services.NewBadgerDB("./db")
+	//n.cache = services.NewBadgerDB(db_dir)
 
 	n.Logger.Info().Msgf("node running on port: [%s]", n.ListenAddr)
 
@@ -231,10 +231,11 @@ func initBlock(chain *Chain) *proto.Block {
 		hash       []byte
 		prevHash   []byte
 		prevHeight int64
+		db_dir     = util.LoadConfig().BADGER.DataDir
 	)
 
-	if services.FolderExists("db") {
-		DB, err := services.ConnectBadgerDB("db")
+	if services.FolderExists(db_dir) {
+		DB, err := services.ConnectBadgerDB(db_dir)
 		if err != nil {
 			logger.Error().Msgf("failed to connect to badgerDB: [%s]", err)
 		}
@@ -276,7 +277,8 @@ func (n *Node) validatorLoop() {
 	//refactoring
 	var (
 		privKey   = crypto.NewPrivateKeyFromSeedStr(util.LoadConfig().KEYS.GodSeed) // <---- this has to be refactored
-		recipient = []byte{}                                                        // <---- this has to be refactored
+		recipient = []byte{}
+		db_dir    = util.LoadConfig().BADGER.DataDir // <---- this has to be refactored
 	)
 
 	privKey, err := crypto.LoadPrivateKeyFromFile("private_key.txt")
@@ -420,11 +422,11 @@ func (n *Node) validatorLoop() {
 
 			var lastBlockHeight int64 = 0
 
-			bdb, err := services.ConnectBadgerDB("db")
+			bdb, err := services.ConnectBadgerDB(db_dir)
 			if err != nil {
 				logger.Error().Msgf("failed to connect to badgerDB: [%s]", err)
 			}
-			if services.FolderExists("db") {
+			if services.FolderExists(db_dir) {
 				_, lastBlockHeight, _, _ = bdb.GetLatestRecord() //ignore error
 			}
 			bdb.Set([]byte("blockStore"), []byte(hex.EncodeToString(types.HashBlock(block))), lastBlockHeight+1, types.BlockBytes(block))

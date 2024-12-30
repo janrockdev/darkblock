@@ -16,8 +16,14 @@ run5: build
 run6: build
 	./bin/darkblock -port=:6000
 
-tx:
-	go run ./client/client.go
+tx3:
+	go run ./client/client.go -port=:3000
+
+tx4:
+	go run ./client/client.go -port=:4000
+
+tx5:
+	go run ./client/client.go -port=:5000
 
 test:
 	go test ./...

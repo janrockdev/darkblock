@@ -11,11 +11,13 @@ import (
 	badger "github.com/dgraph-io/badger/v4"
 	"github.com/janrockdev/darkblock/proto"
 	"github.com/janrockdev/darkblock/types"
+	"github.com/janrockdev/darkblock/util"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRecoveryFromLastBlock(t *testing.T) {
-	DB, err := ConnectBadgerDB("../db")
+	db_dir := util.LoadConfig().BADGER.DataDir
+	DB, err := ConnectBadgerDB("../" + db_dir)
 	if err != nil {
 		panic(err)
 	}
@@ -73,7 +75,8 @@ func previewBlock(lastBlock []byte) {
 
 func TestGetLatestTwoBlocks(t *testing.T) {
 	// Connect to the database
-	DB, err := ConnectBadgerDB("../db")
+	db_dir := util.LoadConfig().BADGER.DataDir
+	DB, err := ConnectBadgerDB("../" + db_dir)
 	assert.Nil(t, err)
 
 	// Get the length of the blockStore namespace
@@ -101,7 +104,8 @@ func TestGetLatestTwoBlocks(t *testing.T) {
 
 func TestPrintAllTransactions(t *testing.T) {
 	// Open the database in read-only mode
-	opts := badger.DefaultOptions("../db").WithReadOnly(true).WithLogger(nil)
+	db_dir := util.LoadConfig().BADGER.DataDir
+	opts := badger.DefaultOptions("../" + db_dir).WithReadOnly(true).WithLogger(nil)
 	bdb, err := badger.Open(opts)
 	if err != nil {
 		log.Fatal(err)

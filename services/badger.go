@@ -17,7 +17,7 @@ import (
 
 const (
 	badgerDiscardRatio = 0.5
-	badgerGCInterval   = 5 * time.Second
+	badgerGCInterval   = 100 * time.Millisecond
 )
 
 type (
@@ -73,7 +73,7 @@ func NewBadgerDB(dataDir string) DB {
 }
 
 func ConnectBadgerDB(dataDir string) (DB, error) {
-	opts := badger.DefaultOptions("")
+	opts := badger.DefaultOptions("").WithMemTableSize(64 << 20)
 	opts.SyncWrites = true
 	opts.WithLogger(nil)
 	opts.Logger = nil
@@ -83,20 +83,18 @@ func ConnectBadgerDB(dataDir string) (DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	//defer badgerDB.Close()
 
 	bdb := &BadgerDB{
 		db: badgerDB,
 	}
 	bdb.ctx, bdb.cancelFunc = context.WithCancel(context.Background())
 
-	//go bdb.runGC()
+	go bdb.runGC()
 	return bdb, nil
 }
 
 func ConnectBadgerDBReadOnly(dataDir string) (DB, error) {
-	opts := badger.DefaultOptions(dataDir).
-		WithReadOnly(true).WithLogger(nil)
+	opts := badger.DefaultOptions(dataDir).WithReadOnly(true)
 
 	badgerDB, err := badger.Open(opts)
 	if err != nil {
@@ -109,7 +107,7 @@ func ConnectBadgerDBReadOnly(dataDir string) (DB, error) {
 	}
 	bdb.ctx, bdb.cancelFunc = context.WithCancel(context.Background())
 
-	//go bdb.runGC()
+	go bdb.runGC()
 	return bdb, nil
 }
 
@@ -185,12 +183,14 @@ func (bdb *BadgerDB) Get(namespace, key []byte) (value []byte, err error) {
 }
 
 func (bdb *BadgerDB) Set(namespace, keyHash []byte, keyHeight int64, value []byte) error {
+	prefix := fmt.Sprintf("%016d", keyHeight)
+	util.Logger.Debug().Msgf("setting key %s", fmt.Sprintf("%s_%s", prefix, keyHash))
 	err := bdb.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(badgerNamespaceKey(namespace, []byte(fmt.Sprintf("%d_%s", keyHeight, keyHash))), value)
+		return txn.Set(badgerNamespaceKey(namespace, []byte(fmt.Sprintf("%s_%s", prefix, keyHash))), value)
 	})
 
 	if err != nil {
-		bdb.logger.Debugf("failed to set key %s for namespace %s: %v", fmt.Sprintf("%d_%s", keyHeight, keyHash), namespace, err)
+		bdb.logger.Debugf("failed to set key %s for namespace %s: %v", fmt.Sprintf("%s_%s", prefix, keyHash), namespace, err)
 		return err
 	}
 
@@ -376,7 +376,6 @@ func (bdb *BadgerDB) runGC() {
 					util.Logger.Error().Msgf("failed to GC BadgerDB: %v", err)
 				}
 			}
-
 		case <-bdb.ctx.Done():
 			return
 		}
@@ -386,4 +385,49 @@ func (bdb *BadgerDB) runGC() {
 func badgerNamespaceKey(namespace, key []byte) []byte {
 	prefix := []byte(fmt.Sprintf("%s/", namespace))
 	return append(prefix, key...)
+}
+
+func PreviewBlock(lastBlock []byte) {
+	// Unmarshal the serialized block into a Block struct
+	var block *proto.Block
+	block, _ = types.UnmarshalBlock(lastBlock)
+
+	// Parse and log the Header
+	header := block.Header
+	util.Logger.Info().Msgf("Block Hash: %x", types.HashBlock(block))
+	// util.Logger.Info().Msgf("Parsed Block Header:")
+	// util.Logger.Info().Msgf("  Version: %d", header.Version)
+	// util.Logger.Info().Msgf("  Height: %d", header.Height)
+	util.Logger.Info().Msgf("  PrevHash: %x", header.PrevHash)
+	// util.Logger.Info().Msgf("  RootHash: %x", header.RootHash)
+	util.Logger.Info().Msgf("  Timestamp: %s", time.Unix(0, header.Timestamp))
+
+	// // Parse and log the Public Key and Signature
+	// util.Logger.Info().Msgf("Block Public Key: %x", block.PublicKey)
+	// util.Logger.Info().Msgf("Block Signature: %x", block.Signature)
+
+	// Iterate through Transactions
+	util.Logger.Info().Msgf("Parsed Transactions:")
+	for i, tx := range block.Transactions {
+		util.Logger.Info().Msgf("Transaction %d:", i)
+		util.Logger.Info().Msgf("  Version: %d", tx.Version)
+		util.Logger.Info().Msgf("  Hash: %x", types.HashTransactionNoSigPuK(tx))
+
+		// Log Transaction Inputs
+		for j, input := range tx.Inputs {
+			util.Logger.Info().Msgf("    Input %d:", j)
+			util.Logger.Info().Msgf("      PrevTxHash: %s", input.PrevTxHash)
+			util.Logger.Info().Msgf("      PrevOutIndex: %d", input.PrevOutIndex)
+			util.Logger.Info().Msgf("      PublicKey: %x", input.PublicKey)
+			util.Logger.Info().Msgf("      Signature: %x", input.Signature)
+		}
+
+		// Log Transaction Outputs
+		for k, output := range tx.Outputs {
+			util.Logger.Info().Msgf("    Output %d:", k)
+			util.Logger.Info().Msgf("      Amount: %d", output.Amount)
+			util.Logger.Info().Msgf("      Address: %x", output.Address)
+			util.Logger.Info().Msgf("      Payload: %s", string(output.Payload)) // Assuming payload is string-like
+		}
+	}
 }

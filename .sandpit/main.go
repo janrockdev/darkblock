@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/sha3"
 )
 
 func rnd(i int) int {
@@ -31,6 +33,17 @@ func main() {
 			d := r.Intn(1000)
 			time.Sleep(time.Duration(d+1000) * time.Millisecond) // Simulate some processing time
 			fmt.Printf("Response [%d] (delay [%d]) executed at [%s]\n", rnd(i), d+1000, time.Now())
+
+			hash := sha3.New512()
+
+			// Data to hash
+			data := []byte("Hello, this is an example using SHA-3 512!")
+			// Write data to the hash object
+			hash.Write(data)
+			// Get the resulting hash as a byte slice
+			hashBytes := hash.Sum(nil)
+			// Print the hash in hexadecimal format
+			fmt.Printf("SHA-3 512-bit hash: %x\n", hashBytes)
 			i++
 		}()
 	}

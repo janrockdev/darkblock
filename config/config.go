@@ -9,4 +9,7 @@ type ConfigFile struct {
 		GodSeed     string `mapstructure:"god_seed"`
 		NodePrivKey string `mapstructure:"node_priv_key"`
 	} `mapstructure:"keys"`
+	BADGER struct {
+		DataDir string `mapstructure:"data_dir"`
+	} `mapstructure:"badger"`
 }

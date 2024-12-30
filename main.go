@@ -10,7 +10,6 @@ import (
 
 var logger = util.Logger
 
-// main creates a new node at :3000, and two more nodes at :4000 and :5000
 func main() {
 	port := flag.String("port", ":3000", "port to run the node on")
 	flag.Parse()
@@ -26,19 +25,6 @@ func main() {
 	}
 
 	select {} // block main thread forever
-
-	// makeNode(":3000", []string{}, true)
-	// time.Sleep(1 * time.Second)
-	// makeNode(":4000", []string{":3000"}, false)
-	// time.Sleep(3 * time.Second)
-	// makeNode(":5000", []string{":3000"}, false)
-	// time.Sleep(3 * time.Second)
-	// makeNode(":6000", []string{":3000"})
-	// time.Sleep(1 * time.Second)
-	// for {
-	// 	makeTransaction()
-	// 	time.Sleep(1000 * time.Millisecond)
-	// }
 }
 
 // makeNode creates a new node with the given listen address and bootstrap nodes

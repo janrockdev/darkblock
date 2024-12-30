@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"flag"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/janrockdev/darkblock/crypto"
 	"github.com/janrockdev/darkblock/proto"
+	"github.com/janrockdev/darkblock/services"
 	"github.com/janrockdev/darkblock/types"
 	"github.com/janrockdev/darkblock/util"
 	"google.golang.org/grpc"
@@ -17,19 +20,22 @@ import (
 var logger = util.Logger
 
 func main() {
-	start := time.Now()
-	for i := 1; i < 10001; i++ {
+	port := flag.String("port", ":4000", "port to connect to the node")
+	flag.Parse()
 
-		sendTransaction(i)
-		//time.Sleep(10 * time.Millisecond)
+	start := time.Now()
+	var i int
+	for i = 1; i < 2; i++ {
+		sendTransaction(i, *port)
+		time.Sleep(1 * time.Second)
 	}
 	end := time.Now()
-	logger.Info().Msgf("time taken to send 100 transactions: %s", end.Sub(start))
-	//time.Sleep(5 * time.Second)
-	//util.Logger.Debug().Msgf("%s", searchTransaction(1))
+	logger.Info().Msgf("time taken to send %d transactions: %s", i-1, end.Sub(start))
+	// time.Sleep(2 * time.Second)
+	//searchBlock("0000000000000062_3c252c74ec874ddb6d2785b4da5d275fc2d96b102e1e152b9aed82149feb2bb4")
 }
 
-// first just block
+// first block
 func searchTransaction(index int32) []*proto.Transaction {
 	// create a context with timeout,
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -54,15 +60,35 @@ func searchTransaction(index int32) []*proto.Transaction {
 	return block.Block.Transactions
 }
 
-func sendTransaction(i int) {
+func searchBlock(key string) {
+	db_dir := util.LoadConfig().BADGER.DataDir
+	DB, err := services.ConnectBadgerDBReadOnly(db_dir)
+	if err != nil {
+		panic(err)
+	}
+	length, err := DB.Len([]byte("blockStore"))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Length of blockStore namespace:", length)
+	block, err := DB.Get([]byte("blockStore"), []byte(key))
+	if err != nil {
+		panic(err)
+	}
+	services.PreviewBlock(block)
+
+	DB.Close()
+}
+
+func sendTransaction(i int, port string) {
 	// create a context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// create a new grpc client
-	client, err := grpc.DialContext(ctx, ":4000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	client, err := grpc.DialContext(ctx, port, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		logger.Fatal().Msgf("did not connect to %s: %v", ":3000", err)
+		logger.Fatal().Msgf("did not connect to %s: %v", port, err)
 	}
 	defer client.Close()
 
@@ -108,7 +134,7 @@ func sendTransaction(i int) {
 	// send the transaction
 	_, err = c.HandleTransaction(ctx, tx) // receiver side will have different hash bacause added signature and pubkey
 	if err != nil {
-		logger.Fatal().Msgf("handshake failed while sending transaction to node at :3000: %s", err)
+		logger.Fatal().Msgf("handshake failed while sending transaction to node at %s: %s", port, err)
 	}
 
 	// log what I sent <---- this need to be refactored
