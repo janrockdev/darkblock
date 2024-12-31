@@ -1,2 +1,4 @@
 bin/
 db/
+dashboard/node_modules/
+dashboard/.next/

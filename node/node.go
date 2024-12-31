@@ -256,8 +256,8 @@ func initBlock(chain *Chain) *proto.Block {
 
 	header := &proto.Header{
 		Version:   1,                     // from config file
-		Height:    int32(prevHeight) + 1, //int32(chain.Height() + 1),  // current size of blockStore + 1
-		PrevHash:  prevHash,              //types.HashBlock(prevBlock), // previous full block hash
+		Height:    int32(prevHeight) + 1, // int32(chain.Height() + 1),  // current size of blockStore + 1
+		PrevHash:  prevHash,              // types.HashBlock(prevBlock), // previous full block hash
 		RootHash:  nil,                   // merkle root hash, to be calculated
 		Timestamp: time.Now().UnixNano(),
 	}
@@ -335,7 +335,7 @@ func (n *Node) validatorLoop() {
 				if string(baseTx.Outputs[0].Payload) != "genesis" {
 					baseTx.Inputs[0].Signature = nil
 					baseTx.Inputs[0].PublicKey = nil
-					logger.Debug().Msgf("(4) building transaction [%s%s%s] --------------", red, hex.EncodeToString(types.HashTransaction(baseTx))[:3], reset)
+					logger.Debug().Msgf("(4) preparing transaction [%s%s%s] --------------", red, hex.EncodeToString(types.HashTransaction(baseTx))[:3], reset)
 				} else {
 					logger.Debug().Msgf("(4) building transaction [%sgenesis%s] -----------------------", red, reset)
 				}
@@ -399,7 +399,7 @@ func (n *Node) validatorLoop() {
 			}
 			block.Header.RootHash = tree.MerkleRoot()
 
-			logger.Debug().Msgf("(6) template [%s] built with [%d] transactions, height [%d], prevHash [%s] and merkle [%s]",
+			logger.Debug().Msgf("(6) block template [%s] built with [%d] transactions, height [%d], prevHash [%s] and merkle [%s]",
 				blockTemplateHash[:3],
 				len(block.Transactions),
 				block.GetHeader().Height,
@@ -409,7 +409,7 @@ func (n *Node) validatorLoop() {
 			//logger.Debug().Msgf("pubKey: [%s]", hex.EncodeToString(privKey.Public().Bytes()))
 
 			types.SignBlock(privKey, block)
-			logger.Debug().Msgf("(7) block [%s] has been created as signed", hex.EncodeToString(types.HashBlock(block))[:3])
+			logger.Debug().Msgf("(7) new block [%s] (from template [%s]) has been created and signed", hex.EncodeToString(types.HashBlock(block))[:3], blockTemplateHash[:3])
 
 			// // add validation here (remove chain.AddBlock(block)) <---- this has to be refactored
 			// ver := types.VerifyBlock(block)
@@ -422,6 +422,7 @@ func (n *Node) validatorLoop() {
 
 			var lastBlockHeight int64 = 0
 
+			// BadgerDB
 			bdb, err := services.ConnectBadgerDB(db_dir)
 			if err != nil {
 				logger.Error().Msgf("failed to connect to badgerDB: [%s]", err)
@@ -434,6 +435,18 @@ func (n *Node) validatorLoop() {
 			if err != nil {
 				logger.Error().Msgf("badger access error (Len)")
 			}
+
+			// Couchbase
+			cs, err := services.NewCouchbaseService("couchbase://localhost", "Administrator", "password", "blocks", "transactions")
+			if err != nil {
+				logger.Error().Msgf("failed to create Couchbase service: %v", err)
+			}
+
+			err = cs.StoreBlock(block)
+			if err != nil {
+				logger.Error().Msgf("failed to store block: %v", err)
+			}
+			cs.Close()
 
 			// probably the place to plug consensus
 			n.Logger.Debug().Msgf("(8) proposing block [%s] with [%d] transactions to consensus", hex.EncodeToString(types.HashBlock(block))[:3], len(block.Transactions))
@@ -448,7 +461,7 @@ func (n *Node) validatorLoop() {
 			// broadcast the block
 			n.broadcast(block)
 
-			bdb.Close() // <---------------------------------------------------------------------------------------------------------------------------------------------------------------
+			bdb.Close()
 		}
 	}
 }

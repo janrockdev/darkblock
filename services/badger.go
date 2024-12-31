@@ -184,7 +184,7 @@ func (bdb *BadgerDB) Get(namespace, key []byte) (value []byte, err error) {
 
 func (bdb *BadgerDB) Set(namespace, keyHash []byte, keyHeight int64, value []byte) error {
 	prefix := fmt.Sprintf("%016d", keyHeight)
-	util.Logger.Debug().Msgf("setting key %s", fmt.Sprintf("%s_%s", prefix, keyHash))
+	util.Logger.Debug().Msgf("key %s", fmt.Sprintf("%s_%s", prefix, keyHash))
 	err := bdb.db.Update(func(txn *badger.Txn) error {
 		return txn.Set(badgerNamespaceKey(namespace, []byte(fmt.Sprintf("%s_%s", prefix, keyHash))), value)
 	})

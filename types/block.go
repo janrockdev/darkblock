@@ -2,7 +2,7 @@ package types
 
 import (
 	"bytes"
-	//"crypto/sha256"
+
 	"golang.org/x/crypto/sha3"
 
 	"github.com/cbergoon/merkletree"
@@ -60,6 +60,7 @@ func VerifyBlock(b *proto.Block) bool {
 		logger.Error().Msg("invalid block signature")
 		return false
 	}
+
 	return true //sig.Verify(pubKey, hash)
 }
 
@@ -83,6 +84,7 @@ func SignBlock(pk *crypto.PrivateKey, b *proto.Block) *crypto.Signature {
 	return sig
 }
 
+// VerifyRootHash verifies the root hash of a block.
 func VerifyRootHash(b *proto.Block) bool {
 	tree, err := GetMerkleTree(b)
 	if err != nil {
@@ -104,6 +106,7 @@ func VerifyRootHash(b *proto.Block) bool {
 	return bytes.Equal(b.Header.RootHash, tree.MerkleRoot())
 }
 
+// GetMerkleTree returns the merkle tree of a block.
 func GetMerkleTree(b *proto.Block) (*merkletree.MerkleTree, error) {
 	// block has to have transactions to create a merkle tree
 
@@ -143,6 +146,7 @@ func HashHeader(header *proto.Header) []byte {
 	return hashBytes[:]
 }
 
+// HashTransaction returns the sha256 hash of a transaction.
 func BlockBytes(b *proto.Block) []byte {
 	data, err := pb.Marshal(b)
 	if err != nil {
@@ -153,6 +157,7 @@ func BlockBytes(b *proto.Block) []byte {
 	return data
 }
 
+// HashTransaction returns the sha256 hash of a transaction.
 func UnmarshalBlock(serializedBlock []byte) (*proto.Block, error) {
 	var block proto.Block
 	err := pb.Unmarshal(serializedBlock, &block)

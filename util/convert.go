@@ -17,19 +17,19 @@ func StringToHex(hexHash string) ([]byte, error) {
 	return hashBytes, nil
 }
 
-// func StringToHex(hexHash string) ([]int, error) {
+func StringToHexInt(hexHash string) ([]int, error) {
 
-// 	// Step 1: Decode the hex string into a byte slice
-// 	hashBytes, err := hex.DecodeString(hexHash)
-// 	if err != nil {
-// 		Logger.Error().Msgf("failed to decode hex string: %s", err)
-// 		return nil, err
-// 	}
+	// Step 1: Decode the hex string into a byte slice
+	hashBytes, err := hex.DecodeString(hexHash)
+	if err != nil {
+		Logger.Error().Msgf("failed to decode hex string: %s", err)
+		return nil, err
+	}
 
-// 	var decimalRepresentation []int
-// 	for _, byteValue := range hashBytes {
-// 		decimalRepresentation = append(decimalRepresentation, int(byteValue))
-// 	}
+	var decimalRepresentation []int
+	for _, byteValue := range hashBytes {
+		decimalRepresentation = append(decimalRepresentation, int(byteValue))
+	}
 
-// 	return decimalRepresentation, nil
-// }
+	return decimalRepresentation, nil
+}
