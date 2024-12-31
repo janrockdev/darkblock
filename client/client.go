@@ -25,9 +25,9 @@ func main() {
 
 	start := time.Now()
 	var i int
-	for i = 1; i < 2; i++ {
+	for i = 1; i < 3; i++ {
 		sendTransaction(i, *port)
-		time.Sleep(1 * time.Second)
+		//time.Sleep(1 * time.Second)
 	}
 	end := time.Now()
 	logger.Info().Msgf("time taken to send %d transactions: %s", i-1, end.Sub(start))
@@ -102,7 +102,8 @@ func sendTransaction(i int, port string) {
 	rno := uuid.New().String()
 
 	tx := &proto.Transaction{
-		Version: 1,
+		Version:   1,
+		Timestamp: time.Now().UnixNano(),
 		Inputs: []*proto.TxInput{
 			{
 				PrevTxHash:   nil, // this will be filled in later after tx update

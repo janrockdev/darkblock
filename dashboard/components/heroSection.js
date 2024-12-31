@@ -20,13 +20,13 @@ function getDTFromNow(nano) {
   return nano ? moment(nano / 1000000).fromNow() : "";
 }
 
-function convertToBlockchainAddress(encodedAddress) {
+function convertHash(encodedAddress) {
   // Decode the base64-encoded address into bytes
   const decodedBytes = Buffer.from(encodedAddress, 'base64');
 
   // You may need to apply further formatting here depending on the blockchain
   // For example, you can directly return the decoded bytes as a hexadecimal string
-  const blockchainAddress = decodedBytes.toString('hex');
+  const blockchainAddress = decodedBytes.toString();
 
   return blockchainAddress;
 }
@@ -94,7 +94,7 @@ export default function HeroSection() {
     const getTxsIds = async () => {
       try {
         const response = await axios.post('http://localhost:8093/query/service', {
-          statement: 'SELECT META().id AS id, header.timestamp AS timestamp, outputs[0].address as toAddress, outputs[0].payload as payload FROM `transactions` ORDER BY timestamp LIMIT 10;',}, {
+          statement: 'SELECT META().id AS id, timestamp, inputs[0].prevTxHash as orig FROM `transactions` ORDER BY timestamp LIMIT 10;',}, {
           headers: {
             'Content-Type': 'application/json',
             // Add authentication headers if needed
@@ -231,29 +231,10 @@ export default function HeroSection() {
                         </td>
                         <td className={styles.tdBlock}>
                           <section className={styles.blueText}>
-                            {txn.id?.slice(0, 7)}...
-                            {txn.id?.slice(-6)}
+                            {txn.id?.slice(0, 7)} (tx::{convertHash(txn.orig)?.slice(0, 3)})
                           </section>
                           <section>
-                            {moment(txn.time, "YYYYMMDD").fromNow()}
-                          </section>
-                        </td>
-                        <td className={styles.tdFromTo}>
-                          <section>
-                            Payload{" "}
-                            <span className={styles.blueText}>
-                              {txn.payload?.slice(0, 6)}...{txn.payload?.slice(-6)}
-                            </span>
-                          </section>
-                          <section>
-                            To{" "}
-                            <span className={styles.blueText}>
-                              {convertToBlockchainAddress(txn.toAddress)?.slice(0, 6)}...
-                              {convertToBlockchainAddress(txn.toAddress)?.slice(-6)}
-                            </span>
-                            <span className={styles.blueText}>
-                              {txn.totalTransactions}
-                            </span>
+                            {getDT(txn.timestamp)}&nbsp;({getDTFromNow(txn.timestamp)})
                           </section>
                         </td>
                       </tr>

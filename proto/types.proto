@@ -51,8 +51,9 @@ message TxOutput {
 
 message Transaction {
 	int32 version = 1;
-	repeated TxInput inputs = 2;
-	repeated TxOutput outputs = 3;
+	int64 timestamp = 2;
+	repeated TxInput inputs = 3;
+	repeated TxOutput outputs = 4;
 }
 
 message TxSearch {

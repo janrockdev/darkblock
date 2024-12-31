@@ -368,9 +368,10 @@ func (n *Node) validatorLoop() {
 					},
 				}
 				tx := &proto.Transaction{
-					Version: 1,
-					Inputs:  inputs,
-					Outputs: outputs,
+					Version:   1,
+					Timestamp: tx.Timestamp,
+					Inputs:    inputs,
+					Outputs:   outputs,
 				}
 
 				originalTx := hex.EncodeToString(types.HashTransaction(baseTx))
