@@ -1,66 +1,78 @@
 import moment from "moment";
 import styles from "@/styles/Home.module.css";
+import Link from "next/link";
 
-export default function SearchResults(props) {
+function getDT(nano) {
+  return nano ? moment(nano / 1000000).format("YYYY-MM-DD HH:mm:ss") : "";
+}
+
+function getDTFromNow(nano) {
+  return nano ? moment(nano / 1000000).fromNow() : "";
+}
+
+export default function SearchResults({ result, searchInput, searchType }) {
   return (
     <section className={styles.searchResults}>
-      <p className={styles.amountOfTransactions}>
-        Latest 25 from a total of{" "}
-        <span className={styles.blueText}>{props.result.result.length}</span>
-        transactions
-      </p>
-      <table className={styles.txnSection}>
-        <thead>
-          <tr className={styles.txnTitle}>
-            <th>Transaction Hash</th>
-            <th>Method</th>
-            <th>Block</th>
-            <th className={styles.blueText}>Age</th>
-            <th>From</th>
-            <th></th>
-            <th>To</th>
-            <th>Value</th>
-            <th className={styles.blueText}>Txn Fee</th>
-          </tr>
-        </thead>
-        {props.result.result.map((txn) => {
-          return (
-            <tr className={styles.txn}>
-              <td className={styles.blueText}>{txn.hash.slice(0, 16)}...</td>
-              <td>
-                <span className={styles.transfer}>
-                  {txn.decoded_call ? txn.decoded_call.label : "Unknown"}
-                </span>
-              </td>
-              <td className={styles.blueText}>{txn.block_number}</td>
-              <td>{moment(txn.block_timestamp, "YYYYMMDD").fromNow()}</td>
-              <td>
-                {txn.from_address.slice(0, 8)}...{txn.from_address.slice(34)}
-              </td>
-              <td>
-                <span
-                  className={`${
-                    txn.from_address.toLowerCase() !==
-                    props.result.searchInput.toLowerCase()
-                      ? styles.inTxn
-                      : styles.outTxn
-                  }`}
-                >
-                  {txn.from_address.toLowerCase() !==
-                  props.result.searchInput.toLowerCase()
-                    ? "IN"
-                    : "OUT"}
-                </span>
-              </td>
-              <td className={styles.blueText}>
-                {txn.to_address.slice(0, 8)}...{txn.to_address.slice(34)}
-              </td>
-              <td>{(txn.value / 10 ** 18).toFixed(5)} ETH</td>
-              <td>{(txn.gas_price / 10 ** 18).toFixed(12)}</td>
+      {(result.searchType === 'transaction' || result.searchType === 'payload') && (
+        <table className={styles.txnSection}>
+          <thead>
+            <tr className={styles.txnTitle}>
+              <th>Transaction Detail</th>
+              <th>Timestamp</th>
+              <th>Address To</th>
+              <th>Payload</th>
             </tr>
-          );
-        })}
-      </table>
+          </thead>
+          <tbody>
+            {result.result.results.map((txn) => {
+              return (
+                <tr key={txn.id} className={styles.txn}>
+                  <td className={styles.blueText}>
+                    <Link href={`/transactionDetails?id=${txn.id}`}>
+                      {txn.id.slice(0, 16)}...{txn.id.slice(-6)}
+                    </Link>
+                  </td>
+                  <td>{getDT(txn.transactions.timestamp)}</td>
+                  <td>{txn.transactions.outputs[0].address.slice(0, 16)}...{txn.transactions.outputs[0].address.slice(-6)}</td>
+                  <td className={styles.blueText}>
+                    <Link href={`/transactionDetails?id=${txn.id}`}>
+                      {txn.transactions.outputs[0].payload.slice(0, 16)}...{txn.transactions.outputs[0].payload.slice(-6)}
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+      {result.searchType === 'block' && (
+        <table className={styles.txnSection}>
+          <thead>
+            <tr className={styles.txnTitle}>
+              <th>#Block</th>
+              <th>Timestamp</th>
+              <th>Height</th>
+              <th>Transactions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.result.results.map((block) => {
+              return (
+                <tr key={block.id} className={styles.txn}>
+                  <td className={styles.blueText}>
+                    <Link href={`/blockDetails?id=${block.id}`}>
+                      {block.id.slice(0, 23)}...{block.id.slice(-6)}
+                    </Link>
+                  </td>
+                  <td>{getDT(block.blocks.header.timestamp)}</td>
+                  <td>{block.blocks.header.height}</td>
+                  <td>{block.blocks.transactions.length}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }

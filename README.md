@@ -50,4 +50,10 @@ docker run -d --name db -p 8091-8096:8091-8096 -p 11210-11211:11210-11211 couchb
 ```
 
 ### UI (Dashboard/Scan)
+```shell
+# open cmd and enter:
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --disable-web-security --user-data-dir=c:\tmp
+```
+
+
 <img src="docs/ui.png" alt="DARKBLOCK" width="1000"/>

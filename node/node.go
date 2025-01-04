@@ -316,6 +316,7 @@ func (n *Node) validatorLoop() {
 				baseTx.Inputs[0].Signature = nil
 				baseTx.Inputs[0].PublicKey = nil
 				// baseTx.Inputs[0].PrevTxHash = nil
+				util.Logger.Debug().Msgf("baseTx: %v", baseTx)
 				logger.Debug().Msgf("(2) transaction [%s%s%s] stored to mempool",
 					red, hex.EncodeToString(types.HashTransaction(baseTx))[:3], reset)
 			}

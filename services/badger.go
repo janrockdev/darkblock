@@ -431,3 +431,17 @@ func PreviewBlock(lastBlock []byte) {
 		}
 	}
 }
+
+func ValidatePayload(lastBlock []byte, payload string) bool {
+	var block *proto.Block
+	block, _ = types.UnmarshalBlock(lastBlock)
+
+	for _, tx := range block.Transactions {
+		for _, output := range tx.Outputs {
+			if string(output.Payload) == payload {
+				return true
+			}
+		}
+	}
+	return false
+}

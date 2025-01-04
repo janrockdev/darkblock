@@ -107,8 +107,9 @@ func CopyTransaction(tx *proto.Transaction) *proto.Transaction {
 
 	// Create a new transaction with copied inputs and outputs
 	return &proto.Transaction{
-		Version: tx.Version,
-		Inputs:  inputs,
-		Outputs: outputs,
+		Version:   tx.Version,
+		Timestamp: tx.Timestamp,
+		Inputs:    inputs,
+		Outputs:   outputs,
 	}
 }

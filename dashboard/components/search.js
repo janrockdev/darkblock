@@ -8,19 +8,47 @@ export default function Search() {
   const [showResult, setShowResult] = useState(false);
   const [result, setResult] = useState([]);
   const [searchInput, setSearchInput] = useState("");
+  const [searchType, setSearchType] = useState(""); // New state variable for search type
 
   const changeHandler = (e) => {
     setSearchInput(e.target.value);
   };
 
   const handleSearch = async () => {
+    const searchInput = document.querySelector("#inputField").value;
     document.querySelector("#inputField").value = "";
 
-    const response = await axios.get("http://localhost:5001/address", {
-      params: { address: searchInput },
+    let query = '';
+    let type = '';
+
+    if (searchInput.startsWith('tx::')) {
+      query = `SELECT META().id AS id, * FROM transactions WHERE META().id = "${searchInput}";`;
+      type = 'transaction';
+    } else if (searchInput.startsWith('block::')) {
+      query = `SELECT META().id AS id, * FROM blocks WHERE META().id = "${searchInput}";`;
+      type = 'block';
+    } else if (searchInput.startsWith('ey')) {
+      query = `SELECT META().id AS id, * FROM transactions WHERE outputs[0].payload = "${searchInput}";`;
+      type = 'payload';
+    } else {
+      // Handle invalid input or default case
+      console.error('Invalid input format');
+      return;
+    }
+
+    const response = await axios.post("http://localhost:8093/query/service", {
+      statement: query,
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        // Add authentication headers if needed
+        'Authorization': 'Basic ' + btoa('Administrator:password')
+      }
     });
 
-    setResult(response.data.result);
+    console.log(response.data);
+    setResult(response.data);
+    setSearchType(type); // Set the search type
     setShowResult(true);
   };
 
@@ -35,8 +63,8 @@ export default function Search() {
               type="text"
               id="inputField"
               name="inputField"
-              maxLength="120"
-              placeholder="Search by Address / Txn Hash / Block Hash"
+              maxLength="160"
+              placeholder="Search by Txn Hash / Block Hash / Payload"
               required
               onChange={changeHandler}
             />
@@ -62,7 +90,7 @@ export default function Search() {
           </section>
         </section>
       </section>
-      {showResult && <SearchResults result={{ result, searchInput }} />}
+      {showResult && <SearchResults result={{ result, searchInput, searchType }} />}
     </section>
   );
 }

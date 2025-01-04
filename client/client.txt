@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,47 +20,19 @@ import (
 var logger = util.Logger
 
 func main() {
-	// port := flag.String("port", ":4000", "port to connect to the node")
+	port := flag.String("port", ":4000", "port to connect to the node")
 	flag.Parse()
-	metadata := "hello2"
 
-	// // insert
-	// start := time.Now()
-	// var i int
-	// for i = 1; i < 2; i++ {
-	// 	sendTransaction(i, *port, metadata)
-	// 	//time.Sleep(1 * time.Second)
-	// }
-	// end := time.Now()
-	// logger.Info().Msgf("time taken to send %d transactions: %s", i-1, end.Sub(start))
-
+	start := time.Now()
+	var i int
+	for i = 1; i < 2; i++ {
+		sendTransaction(i, *port)
+		//time.Sleep(1 * time.Second)
+	}
+	end := time.Now()
+	logger.Info().Msgf("time taken to send %d transactions: %s", i-1, end.Sub(start))
 	// time.Sleep(2 * time.Second)
-
-	// search
-	metadataObject := fmt.Sprintf("{\"metadata\": \"sims_%s\"}", metadata)
-	str := base64.StdEncoding.EncodeToString([]byte(metadataObject))
-	cs, err := services.NewCouchbaseService("couchbase://localhost", "Administrator", "password", "blocks", "transactions")
-	if err != nil {
-		logger.Error().Msgf("failed to create Couchbase service: %v", err)
-	}
-	transaction := ""
-	transaction, err = cs.SearchTransactionByPayload([]byte(str))
-	if err != nil {
-		logger.Error().Msgf("failed to search transaction: %v", err)
-	}
-	util.Logger.Info().Msg(transaction)
-	block := ""
-	block, err = cs.SearchBlockByPayload([]byte(str))
-	if err != nil {
-		logger.Error().Msgf("failed to search block: %v", err)
-	}
-	util.Logger.Info().Msg(block)
-	cs.Close()
-	if searchBlockAndValidate(strings.TrimPrefix(block, "block::"), metadataObject) {
-		logger.Info().Msg("matadata validated")
-	} else {
-		logger.Error().Msg("matadata not found")
-	}
+	//searchBlock("0000000000000062_3c252c74ec874ddb6d2785b4da5d275fc2d96b102e1e152b9aed82149feb2bb4")
 }
 
 // first block
@@ -90,28 +60,27 @@ func searchTransaction(index int32) []*proto.Transaction {
 	return block.Block.Transactions
 }
 
-func searchBlockAndValidate(key string, metadata string) bool {
+func searchBlock(key string) {
 	db_dir := util.LoadConfig().BADGER.DataDir
 	DB, err := services.ConnectBadgerDBReadOnly(db_dir)
 	if err != nil {
-		logger.Error().Msgf("failed to create Couchbase service: %v", err)
+		panic(err)
 	}
 	length, err := DB.Len([]byte("blockStore"))
 	if err != nil {
-		logger.Error().Msgf("failed to open Couchbase bucket: %v", err)
+		panic(err)
 	}
-	util.Logger.Debug().Msgf("length of blockStore namespace: %d", length)
+	fmt.Println("Length of blockStore namespace:", length)
 	block, err := DB.Get([]byte("blockStore"), []byte(key))
 	if err != nil {
-		logger.Error().Msgf("failed to validate metadata: %v", err)
+		panic(err)
 	}
-	res := services.ValidatePayload(block, metadata)
-	DB.Close()
+	services.PreviewBlock(block)
 
-	return res
+	DB.Close()
 }
 
-func sendTransaction(i int, port string, v string) {
+func sendTransaction(i int, port string) {
 	// create a context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -130,9 +99,7 @@ func sendTransaction(i int, port string, v string) {
 		logger.Fatal().Msgf("failed to load private key: %s", err)
 	}
 
-	if v == "" {
-		v = uuid.New().String()
-	}
+	rno := uuid.New().String()
 
 	tx := &proto.Transaction{
 		Version:   1,
@@ -149,12 +116,13 @@ func sendTransaction(i int, port string, v string) {
 			{
 				Amount:  1,
 				Address: privKey.Public().Address().Bytes(),
-				Payload: []byte("{\"metadata\": \"sims_" + v + "\"}"),
+				Payload: []byte("{\"metadata\": \"sims_" + rno + "\"}"),
 			},
 		},
 	}
 
 	// hash the transaction
+	util.Logger.Debug().Msgf("tx: %v", tx)
 	hashTx := types.HashTransaction(tx)
 
 	// sign the transaction

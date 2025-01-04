@@ -1,0 +1,182 @@
+package main
+
+import (
+	"context"
+	"encoding/hex"
+	"flag"
+	"fmt"
+	"os/exec"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/janrockdev/darkblock/crypto"
+	"github.com/janrockdev/darkblock/proto"
+	"github.com/janrockdev/darkblock/types"
+	"github.com/janrockdev/darkblock/util"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+var logger = util.Logger
+
+// Node performance metrics (latency in milliseconds)
+var nodeLatencies = map[string]float64{
+	"3000": 0.0,
+	"4000": 0.0,
+}
+
+// Measure the round-trip latency to a node via gRPC
+func measureGRPCLatency(node string) float64 {
+	// Create a context with timeout for the gRPC request
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Connect to the node via gRPC
+	client, err := grpc.DialContext(ctx, "localhost:"+node, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		logger.Fatal().Msgf("failed to connect to node %s: %v", node, err)
+	}
+	defer client.Close()
+
+	// Create a new node client
+	c := proto.NewNodeClient(client)
+
+	// Send a simple gRPC request to the node (ping equivalent)
+	start := time.Now()
+	_, err = c.GetBlock(ctx, &proto.BlockSearch{BlockHeight: 1}) // Example request to get block info
+	if err != nil {
+		logger.Fatal().Msgf("failed to send gRPC request to node %s: %v", node, err)
+	}
+	end := time.Now()
+
+	// Calculate and return the round-trip latency in milliseconds
+	return end.Sub(start).Seconds() * 1000
+}
+
+// AI model to predict the best node based on latency data using a Python script
+func predictBestNode() string {
+	// Prepare features for the model
+	latency3000 := nodeLatencies["3000"]
+	latency4000 := nodeLatencies["4000"]
+	// You can also include additional features like node load, success rate, etc.
+	cmd := exec.Command("bash", "-c", "source ./client/venv/bin/activate")
+	err := cmd.Run()
+	if err != nil {
+		logger.Fatal().Msgf("failed to create virtual environment: %v", err)
+	}
+
+	cmd = exec.Command("./client/venv/bin/python3", "./client/model.py", fmt.Sprintf("%f", latency3000), fmt.Sprintf("%f", latency4000))
+
+	// Run the Python script and capture the output
+	output, err := cmd.Output()
+	if err != nil {
+		logger.Fatal().Msgf("failed to execute Python model: %v", err)
+	}
+
+	// Parse the output from the Python model (expected output: "3000" or "4000")
+	if string(output) == "3000\n" {
+		return "3000"
+	} else {
+		return "4000"
+	}
+}
+
+func main() {
+	port := flag.String("port", ":4000", "port to connect to the node")
+	flag.Parse()
+
+	start := time.Now()
+	var i int
+	for i = 1; i < 3; i++ {
+		sendTransaction(i, *port)
+	}
+	end := time.Now()
+	logger.Info().Msgf("time taken to send %d transactions: %s", i-1, end.Sub(start))
+}
+
+// Function to send a transaction to the selected node
+func sendTransaction(i int, port string) {
+	// Measure latency for both nodes via gRPC
+	nodeLatencies["3000"] = measureGRPCLatency("3000")
+	nodeLatencies["4000"] = measureGRPCLatency("4000")
+
+	// Log the latencies for debugging
+	logger.Debug().Msgf("Measured latencies: Node 3000 = %f ms, Node 4000 = %f ms", nodeLatencies["3000"], nodeLatencies["4000"])
+
+	// Predict the best node using AI
+	bestNode := predictBestNode()
+	logger.Debug().Msgf("Predicted best node: %s", bestNode)
+
+	// Set the selected node port for transaction routing
+	selectedPort := ":" + bestNode
+
+	// Create a context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Create a new grpc client for the selected node
+	client, err := grpc.DialContext(ctx, selectedPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		logger.Fatal().Msgf("did not connect to %s: %v", selectedPort, err)
+	}
+	defer client.Close()
+
+	// Create a new node client
+	c := proto.NewNodeClient(client)
+	privKey, err := crypto.LoadPrivateKeyFromFile("private_key.txt")
+	if err != nil {
+		logger.Fatal().Msgf("failed to load private key: %s", err)
+	}
+
+	rno := uuid.New().String()
+
+	tx := &proto.Transaction{
+		Version:   1,
+		Timestamp: time.Now().UnixNano(),
+		Inputs: []*proto.TxInput{
+			{
+				PrevTxHash:   nil,
+				PrevOutIndex: uint32(i),
+				Signature:    nil,
+				PublicKey:    nil,
+			},
+		},
+		Outputs: []*proto.TxOutput{
+			{
+				Amount:  1,
+				Address: privKey.Public().Address().Bytes(),
+				Payload: []byte("{\"metadata\": \"sims_" + rno + "\"}"),
+			},
+		},
+	}
+
+	// Hash the transaction
+	util.Logger.Debug().Msgf("tx: %v", tx)
+	hashTx := types.HashTransaction(tx)
+
+	// Sign the transaction
+	sig := crypto.SignTransaction(privKey, hashTx)
+	tx.Inputs[0].Signature = sig.Bytes()
+
+	// Add the signature and public key to the transaction
+	tx.Inputs[0].Signature = sig.Bytes()
+	tx.Inputs[0].PublicKey = privKey.Public().Bytes()
+
+	// Send the transaction
+	_, err = c.HandleTransaction(ctx, tx)
+	if err != nil {
+		logger.Fatal().Msgf("handshake failed while sending transaction to node at %s: %s", selectedPort, err)
+	}
+
+	// Log transaction details
+	var (
+		prevOutIndex = tx.Inputs[0].PrevOutIndex
+		signature    = tx.Inputs[0].Signature
+		pubKey       = tx.Inputs[0].PublicKey
+	)
+
+	red := "\x1b[32m"
+	reset := "\x1b[0m"
+	logger.Debug().Msgf("sent transaction [%s%s%s], version [%d], prevOutIndex [%d], signature [%s], publicKey[%s]",
+		red, hex.EncodeToString(hashTx)[:3], reset, tx.Version, prevOutIndex, hex.EncodeToString(signature)[:3], hex.EncodeToString(pubKey)[:3])
+}

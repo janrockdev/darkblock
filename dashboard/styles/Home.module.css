@@ -221,37 +221,37 @@
 }
 
 .txnSection {
-  display: flex;
-  flex-direction: column;
-  align-content: space-between;
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.txnTitle {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #191919;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
+.txnTitle th {
+  text-align: left;  /* Align headers to the left */
+  padding: 10px;
+  border-bottom: 1px solid #3d3d3d;
 }
 
-.txnTitle > th {
-  width: 9rem;
-  text-align: center;
+.txn td {
+  padding: 8px;
+  height: 4rem;
+  text-align: left; /* Align text to the left for all columns */
+  border-bottom: 1px solid #3d3d3d;
 }
 
-.txn {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #191919;
+.blueText {
+  color: #5ca8ff; /* Optional: For the transaction ID */
+  font-weight: bold;
+  word-wrap: break-word; /* Ensure long strings break correctly */
 }
 
-.txn > td {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 9rem;
-  height: 3rem;
-  text-align: center;
+/* Optional: Set minimum widths for better alignment */
+.txnSection th, .txnSection td {
+  min-width: 120px;
+}
+
+/* For larger tables, this may be helpful */
+.txnSection td {
+  word-wrap: break-word;
 }
 
 .transfer {

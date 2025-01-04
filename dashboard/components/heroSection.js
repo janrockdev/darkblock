@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Image from "next/image";
+import Link from "next/link";
 import axios from "axios";
 import moment from "moment";
 import styles from "@/styles/Home.module.css";
@@ -11,6 +11,7 @@ import {
   faFileContract,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useRouter } from 'next/router';
 
 function getDT(nano) {
   return nano ? moment(nano / 1000000).format("YYYY-MM-DD HH:mm:ss") : "";
@@ -39,6 +40,12 @@ export default function HeroSection() {
   const [totalBlocks, setTotalBlocks] = useState("");
   const [blockIds, setBlockIds] = useState([]);
   const [txIds, setTxsIds] = useState([]);
+
+  const router = useRouter();
+  const handleSearchRedirect = (id, type) => {
+    const prefix = type === 'block' ? 'block::' : 'tx::';
+    router.push(`/search?query=${id}`);
+  };
 
   useEffect(() => {
     const getTotalTransactions = async () => {
@@ -78,7 +85,8 @@ export default function HeroSection() {
     const getBlocksIds = async () => {
       try {
         const response = await axios.post('http://localhost:8093/query/service', {
-          statement: 'SELECT META().id AS id, header.timestamp AS timestamp FROM `blocks` ORDER BY META().id DESC LIMIT 10;',}, {
+          statement: 'SELECT META().id AS id, header.timestamp AS timestamp FROM `blocks` ORDER BY META().id DESC LIMIT 10;',
+        }, {
           headers: {
             'Content-Type': 'application/json',
             // Add authentication headers if needed
@@ -94,7 +102,8 @@ export default function HeroSection() {
     const getTxsIds = async () => {
       try {
         const response = await axios.post('http://localhost:8093/query/service', {
-          statement: 'SELECT META().id AS id, timestamp, inputs[0].prevTxHash as orig FROM `transactions` ORDER BY timestamp LIMIT 10;',}, {
+          statement: 'SELECT META().id AS id, timestamp, inputs[0].prevTxHash as orig FROM `transactions` ORDER BY timestamp DESC LIMIT 10;',
+        }, {
           headers: {
             'Content-Type': 'application/json',
             // Add authentication headers if needed
@@ -182,29 +191,27 @@ export default function HeroSection() {
               </section>
               <table className={styles.latestResults_body_table}>
                 <tbody>
-                  {blockIds.map((block) => {
-                    return (
-                      <tr
-                      className={`${styles.latestResults_body_tr} ${
-                        blockResult.indexOf(block) ==
-                        blockResult.length - 1 && styles.lastTd
-                      }`}
+                  {blockIds.map((block) => (
+                    <tr
+                      className={`${styles.latestResults_body_tr} ${blockResult.indexOf(block) === blockResult.length - 1 && styles.lastTd
+                        }`}
                       key={block.id}
-                      >
+                    >
                       <td className={styles.tdIcon}>
                         <FontAwesomeIcon icon={faCube} />
                       </td>
                       <td className={styles.tdBlock}>
                         <section className={styles.blueText}>
-                        {block.id.split('_')[0]}_{block.id.split('_')[1].slice(0, 3)}...
+                          <Link href={`/blockDetails?id=${block.id}`} className={styles.blueText}>
+                            {block.id.split('_')[0]}_{block.id.split('_')[1].slice(0, 3)}...
+                          </Link>
                         </section>
                         <section>
-                        {getDT(block.timestamp)}&nbsp;({getDTFromNow(block.timestamp)})
+                          {getDT(block.timestamp)}&nbsp;({getDTFromNow(block.timestamp)})
                         </section>
                       </td>
-                      </tr>
-                    );
-                  })}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </section>
@@ -214,32 +221,27 @@ export default function HeroSection() {
               </section>
               <table className={styles.latestResults_body_table}>
                 <tbody>
-                  {txIds.map((txn) => {
-                    return (
-                      <tr
-                        className={`${styles.latestResults_body_tr} ${
-                          transactionsResult.indexOf(txn) ==
-                            transactionsResult.length - 1 && styles.lastTd
+                  {txIds.map((txn) => (
+                    <tr
+                      className={`${styles.latestResults_body_tr} ${transactionsResult.indexOf(txn) === transactionsResult.length - 1 && styles.lastTd
                         }`}
-                        key={txn.id}
-                      >
-                        <td className={styles.tdContract}>
-                          <FontAwesomeIcon
-                            icon={faFileContract}
-                            className={styles.tdContract}
-                          />
-                        </td>
-                        <td className={styles.tdBlock}>
-                          <section className={styles.blueText}>
-                            {txn.id?.slice(0, 7)} (tx::{convertHash(txn.orig)?.slice(0, 3)})
-                          </section>
-                          <section>
-                            {getDT(txn.timestamp)}&nbsp;({getDTFromNow(txn.timestamp)})
-                          </section>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                      key={txn.id}
+                    >
+                      <td className={styles.tdContract}>
+                        <FontAwesomeIcon icon={faFileContract} className={styles.tdContract} />
+                      </td>
+                      <td className={styles.tdBlock}>
+                        <section className={styles.blueText}>
+                          <Link href={`/transactionDetails?id=${txn.id}`} className={styles.blueText}>
+                            {txn.id.slice(0, 7)} (tx::{convertHash(txn.orig)?.slice(0, 3)})
+                          </Link>
+                        </section>
+                        <section>
+                          {getDT(txn.timestamp)}&nbsp;({getDTFromNow(txn.timestamp)})
+                        </section>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </section>
