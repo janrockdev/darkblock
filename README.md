@@ -1,11 +1,9 @@
 # DarkBlock - Metadata Blockchain
 
-[![Go](https://github.com/janrockdev/darkblock/actions/workflows/go.yml/badge.svg)](https://github.com/janrockdev/darkblock/actions/workflows/go.yml)
-
 (in progress)
 
-language	files	total
-Go	        24  	4,143
+language	    files	    total
+Go	          24  	    4,143
 
 <img src="docs/logo.png" alt="DARKBLOCK" width="600"/>
 
