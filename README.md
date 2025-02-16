@@ -2,8 +2,9 @@
 
 (in progress)<br/>
 
-language	    files	    total<br/>
-Go	          24  	    4,143
+language:Go </br>
+files: 24<br/>
+lines: 4,143<br/>
 
 <img src="docs/logo.png" alt="DARKBLOCK" width="600"/>
 
