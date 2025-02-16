@@ -1,8 +1,8 @@
 # DarkBlock - Metadata Blockchain
 
-(in progress)
+(in progress)<br/>
 
-language	    files	    total
+language	    files	    total<br/>
 Go	          24  	    4,143
 
 <img src="docs/logo.png" alt="DARKBLOCK" width="600"/>
